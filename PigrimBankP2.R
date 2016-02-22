@@ -23,18 +23,59 @@ library(cvTools)
 # The R-squared is .05742 indicating that the model explains 5.74% of the variance in profit
 # The residual standard error is 274.6 indicating that the model is on average off by $274.6
 # per observation
+pilgrimFact <- pilgrim
+pilgrimFact[,4] <- as.factor(pilgrimFact[,4])
+pilgrimFact[,5] <- as.factor(pilgrimFact[,5])
+
 fit1 <- lm(Profit99~.-ID, data = pilgrim)
 summary(fit1)
 
+maineffects.fact <- lm(Profit99~.-ID, data = pilgrimFact)
+summary(maineffects.fact)
+
 # 2. Regression with interaction terms for Online
+samp <- sample(nrow(pilgrim), 500, replace = FALSE)
+
+# scatterplot showing Online99:Inc99 interaction term
+ggplot(pilgrim[samp,], aes(x=Inc99, y=Profit99, shape=Online99, color = Online99)) + 
+  geom_point() +
+  scale_shape_manual(values=c(1,2)) +
+  geom_smooth(method=lm,   # Add linear regression lines
+              se=FALSE,    # Don't add shaded confidence region
+              fullrange=TRUE) +
+  labs(title = "Interaction between Income and Online with Regards to Profit",
+       x = "Income", y = "Profit")
+
+# scatterplot showing Online99:Age99 interaction term
+ggplot(pilgrim[samp,], aes(x=Age99, y=Profit99, shape=Online99, color = Online99)) + 
+  geom_point() +
+  scale_shape_manual(values=c(1,2)) +
+  geom_smooth(method=lm,   # Add linear regression lines
+              se=FALSE,    # Don't add shaded confidence region
+              fullrange=TRUE) +
+  labs(title = "Interaction between Age and Online with Regards to Profit",
+       x = "Age", y = "Profit")
+
 ct1 <- ctree(Profit99~.-ID, data = pilgrim, control = ctree_control(mincriterion = .95))
 plot(ct1)
 # Viewed tree for interaction terms
 # Took out Age99:Inc99 once triple interaction terms added because became insignificant
-fit2 <- lm(Profit99~.-ID+
-             Online:Age99 + Online99:Inc99 
-           , data = pilgrim)
+fit2 <- lm(Profit99~.-ID + Online99:Inc99, data = pilgrim)
 summary(fit2)
+
+fit2.fact <- lm(Profit99~.-ID+
+             Online99:Age99 + Online99:Inc99 
+           , data = pilgrimFact)
+summary(fit2.fact)
+
+fit3 <- lm(Profit99~.-ID + Online99:Inc99 +Tenure99:Inc99 + Tenure99:Age99 + Tenure99:Inc99:Age99, data = pilgrim)
+summary(fit3)
+
+fit3.fact <- lm(Profit99~.-ID+
+             Online99:Age99 + Online99:Inc99 +
+             Tenure99:Inc99 + Tenure99:Age99 +
+             Tenure99:Inc99:Age99, data = pilgrimFact)
+summary(fit3.fact)
 # While Online99:Age99 is not significant at a .95 confidence level, it shows with some small
 # level of confidence that as a customer increases in age buckets, their profitability for using
 # online increases by an additional $4.14
