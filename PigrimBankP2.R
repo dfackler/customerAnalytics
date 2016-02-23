@@ -58,6 +58,8 @@ ggplot(pilgrim[samp,], aes(x=Age99, y=Profit99, shape=Online99, color = Online99
 
 ct1 <- ctree(Profit99~.-ID, data = pilgrim, control = ctree_control(mincriterion = .95))
 plot(ct1)
+ct2 <- ctree(Profit99~.-ID, data = pilgrimFact, control = ctree_control(mincriterion = .95))
+plot(ct2)
 # Viewed tree for interaction terms
 # Took out Age99:Inc99 once triple interaction terms added because became insignificant
 fit2 <- lm(Profit99~.-ID + Online99:Inc99, data = pilgrim)
@@ -119,9 +121,9 @@ t.test(pilgrim2$Profit99[pilgrim2$condition==1], pilgrim2$Profit00[pilgrim2$cond
 # Randomization appears successful
 ggplot(pilgrim2,aes(x=Profit99,y=Profit00,colour=factor(condition)))+geom_point()+
   stat_smooth(method='lm',formula=y~scale(x,scale=F))
-t.test(pilgrim2$Age99[pilgrim2$condition==0], pilgrim2$Age99[pilgrim2$condition==1], paired = TRUE)
-t.test(pilgrim2$Inc99[pilgrim2$condition==0], pilgrim2$Inc99[pilgrim2$condition==1], paired = TRUE)
-t.test(pilgrim2$Tenure99[pilgrim2$condition==0], pilgrim2$Tenure99[pilgrim2$condition==1], paired = TRUE)
+t.test(pilgrim2$Age99[pilgrim2$condition==0], pilgrim2$Age99[pilgrim2$condition==1], paired = FALSE)
+t.test(pilgrim2$Inc99[pilgrim2$condition==0], pilgrim2$Inc99[pilgrim2$condition==1], paired = FALSE)
+t.test(pilgrim2$Tenure99[pilgrim2$condition==0], pilgrim2$Tenure99[pilgrim2$condition==1], paired = FALSE)
 
 # 3. A t-test shows that the mean profit in 2000 between the two groups is significant
 # It appears that migrating people to online was sucessful in increasing profit by on average $51.25
@@ -187,11 +189,12 @@ fit6 <- lm(Profit00~.-ID, data = pilgrim3)
 summary(fit6)
 
 # adding oldRich and transformations
-fit7 <- lm(Profit00~.-ID+log(Age99) + I(Inc99^2), data = pilgrim3)
+fit7 <- lm(Profit00~.-ID+Profit99*Age99*Inc99*Tenure99-Age99:Inc99-Age99:Tenure99-
+             Inc99:Tenure99-1, data = pilgrim3)
 summary(fit7)
 
 # adding oldRich and interactions
-ct3 <- ctree(Profit00~.-ID-Profit99, data = pilgrim3, control = ctree_control(mincriterion = .95))
+ct3 <- ctree(Profit00~.-ID-Profit99, data = pilgrim3, control = ctree_control(mincriterion = .75))
 plot(ct3)
 fit8 <- lm(Profit00~.-ID + 
              Inc99:Age99 +
@@ -205,6 +208,13 @@ fit9 <- lm(Profit00~.-ID + log(Age99) + I(Inc99^2) +
              Tenure99:Inc99:Age99, data = pilgrim3)
 summary(fit9)
 
+# base factor model
+pilgrim3Fact <- pilgrim3
+pilgrim3Fact$Age99 <- as.factor(pilgrim3Fact$Age99)
+pilgrim3Fact$Inc99 <- as.factor(pilgrim3Fact$Inc99)
+fit10 <- lm(Profit00~.-ID, data = pilgrim3Fact)
+summary(fit10)
+
 # Predict Profit00 for fit3-fit9
 pred2 <- round(predict(fit2),2)
 pred3 <- round(predict(fit3),2)
@@ -214,6 +224,7 @@ pred6 <- round(predict(fit6),2)
 pred7 <- round(predict(fit7),2)
 pred8 <- round(predict(fit8),2)
 pred9 <- round(predict(fit9),2)
+pred10 <- round(predict(fit10),2)
 
 # 2. While adjusted R-squared is highest for model 5 and 8, the sum of squared residuals is smallest
 # for model 9. For this reason, model 9 appears to be the best, however there may be overfitting
@@ -227,16 +238,17 @@ resid6 <- pilgrim3$Profit00-pred6
 resid7 <- pilgrim3$Profit00-pred7
 resid8 <- pilgrim3$Profit00-pred8
 resid9 <- pilgrim3$Profit00-pred9
+resid10 <- pilgrim3$Profit00-pred10
 
 sum(resid2^2)
 sum(resid3^2)
 sum(resid4^2)
 sum(resid5^2)
 sum(resid6^2)
-sum(resid7^2)
+sum(resid7^2) #10278974
 sum(resid8^2)
 sum(resid9^2) # best prediction
-
+sum(resid10^2)
 
 # 3. Model 8 appears the best
 # Increasing K seems to increase variance between models
@@ -247,9 +259,10 @@ cvFit(fit3, data=pilgrim3, y=pilgrim3$Profit00, K=3, R=50) #219.7486
 cvFit(fit4, data=pilgrim3, y=pilgrim3$Profit00, K=3, R=50) #219.4433
 cvFit(fit5, data=pilgrim3, y=pilgrim3$Profit00, K=3, R=50) #216.5191 - Close Second
 cvFit(fit6, data=pilgrim3, y=pilgrim3$Profit00, K=3, R=50) #217.6473
-cvFit(fit7, data=pilgrim3, y=pilgrim3$Profit00, K=3, R=50) #221.2683
+cvFit(fit7, data=pilgrim3, y=pilgrim3$Profit00, K=3, R=50) #209.5914 
 cvFit(fit8, data=pilgrim3, y=pilgrim3$Profit00, K=3, R=50) #215.8030 - Best Model  
 cvFit(fit9, data=pilgrim3, y=pilgrim3$Profit00, K=3, R=50) #219.4305
+cvFit(fit10, data=pilgrim3Fact, y=pilgrim3Fact$Profit00, K=3, R=50) #223.1041
 
 set.seed(12345)
 cvFit(fit2, data=pilgrim3, y=pilgrim3$Profit00, K=3, R=500) #218.3528 
@@ -257,9 +270,10 @@ cvFit(fit3, data=pilgrim3, y=pilgrim3$Profit00, K=3, R=500) #219.7863
 cvFit(fit4, data=pilgrim3, y=pilgrim3$Profit00, K=3, R=500) #219.2754 
 cvFit(fit5, data=pilgrim3, y=pilgrim3$Profit00, K=3, R=500) #216.1581 - Best Model
 cvFit(fit6, data=pilgrim3, y=pilgrim3$Profit00, K=3, R=500) #218.3660
-cvFit(fit7, data=pilgrim3, y=pilgrim3$Profit00, K=3, R=500) #219.7254 
+cvFit(fit7, data=pilgrim3, y=pilgrim3$Profit00, K=3, R=500) #211.7786  
 cvFit(fit8, data=pilgrim3, y=pilgrim3$Profit00, K=3, R=500) #216.3155 - Close Second 
 cvFit(fit9, data=pilgrim3, y=pilgrim3$Profit00, K=3, R=500) #219.292 
+cvFit(fit10, data=pilgrim3Fact, y=pilgrim3Fact$Profit00, K=3, R=500) #222.5971
  
 set.seed(12345)
 cvFit(fit2, data=pilgrim3, y=pilgrim3$Profit00, K=5, R=50) #217.6801 
@@ -267,9 +281,11 @@ cvFit(fit3, data=pilgrim3, y=pilgrim3$Profit00, K=5, R=50) #219.0235
 cvFit(fit4, data=pilgrim3, y=pilgrim3$Profit00, K=5, R=50) #217.3494 
 cvFit(fit5, data=pilgrim3, y=pilgrim3$Profit00, K=5, R=50) #215.0576 - Close Second
 cvFit(fit6, data=pilgrim3, y=pilgrim3$Profit00, K=5, R=50) #217.8197
-cvFit(fit7, data=pilgrim3, y=pilgrim3$Profit00, K=5, R=50) #219.0841 
+cvFit(fit7, data=pilgrim3, y=pilgrim3$Profit00, K=5, R=50) #207.8711 
 cvFit(fit8, data=pilgrim3, y=pilgrim3$Profit00, K=5, R=50) #214.7322 - Best Model
 cvFit(fit9, data=pilgrim3, y=pilgrim3$Profit00, K=5, R=50) #217.8236
+cvFit(fit10, data=pilgrim3Fact, y=pilgrim3Fact$Profit00, K=5, R=50) #220.7548
+
 
 set.seed(12345)
 cvFit(fit2, data=pilgrim3, y=pilgrim3$Profit00, K=5, R=500) #217.5831 
@@ -277,9 +293,19 @@ cvFit(fit3, data=pilgrim3, y=pilgrim3$Profit00, K=5, R=500) #218.8105
 cvFit(fit4, data=pilgrim3, y=pilgrim3$Profit00, K=5, R=500) #218.0610 
 cvFit(fit5, data=pilgrim3, y=pilgrim3$Profit00, K=5, R=500) #215.3720 - Close Second
 cvFit(fit6, data=pilgrim3, y=pilgrim3$Profit00, K=5, R=500) #217.3684 
-cvFit(fit7, data=pilgrim3, y=pilgrim3$Profit00, K=5, R=500) #218.5330 
+cvFit(fit7, data=pilgrim3, y=pilgrim3$Profit00, K=5, R=500) #207.8587
 cvFit(fit8, data=pilgrim3, y=pilgrim3$Profit00, K=5, R=500) #215.1616 - Best Model
 cvFit(fit9, data=pilgrim3, y=pilgrim3$Profit00, K=5, R=500) #218.2483 
+cvFit(fit10, data=pilgrim3Fact, y=pilgrim3Fact$Profit00, K=5, R=500) #220.6839
+
+cvFit(fit2, data=pilgrim3, y=pilgrim3$Profit00, K=10, R=500) #215.3394
+cvFit(fit5, data=pilgrim3, y=pilgrim3$Profit00, K=10, R=500) #214.9193  
+cvFit(fit7, data=pilgrim3, y=pilgrim3$Profit00, K=10, R=500) #205.038 
+
+cvFit(fit2, data=pilgrim3, y=pilgrim3$Profit00, K=300, R=50) #215.3394
+cvFit(fit5, data=pilgrim3, y=pilgrim3$Profit00, K=300, R=50) #214.9193  
+cvFit(fit7, data=pilgrim3, y=pilgrim3$Profit00, K=300, R=50) #205.038 
+
 
 # 5. Yes, they should move forward with the incentive program. 
 # The model estimates that the mean profit will increase from $101.50 to $140.40. 
@@ -293,7 +319,7 @@ targets <- read.csv("pilgrim A2 data part 2 targets.csv")
 targets <- select(targets, -Online99)
 targets$oldRich <- rep(0, times = nrow(targets))
 targets$oldRich[targets$Age99>4 & targets$Inc99>4] <- 1
-targets$predProf00 <- predict(fit8, targets, type = "response")
+targets$predProf00 <- predict(fit7, targets, type = "response")
 t.test(targets$Profit99, targets$predProf00, paired = TRUE)
 
 
