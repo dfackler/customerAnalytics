@@ -189,7 +189,7 @@ fit6 <- lm(Profit00~.-ID, data = pilgrim3)
 summary(fit6)
 
 # adding oldRich and transformations
-fit7 <- lm(Profit00~.-ID+Profit99*Age99*Inc99*Tenure99-Age99:Inc99-Age99:Tenure99-
+fit7 <- lm(Profit00~Age99+Inc99+Tenure99+Profit99+Profit99*Age99*Inc99*Tenure99-Age99:Inc99-Age99:Tenure99-
              Inc99:Tenure99-1, data = pilgrim3)
 summary(fit7)
 
@@ -214,6 +214,9 @@ pilgrim3Fact$Age99 <- as.factor(pilgrim3Fact$Age99)
 pilgrim3Fact$Inc99 <- as.factor(pilgrim3Fact$Inc99)
 fit10 <- lm(Profit00~.-ID, data = pilgrim3Fact)
 summary(fit10)
+
+# just profit99
+fit11 <- lm(Profit00~Profit99, data = pilgrim3Fact)
 
 # Predict Profit00 for fit3-fit9
 pred2 <- round(predict(fit2),2)
@@ -304,8 +307,15 @@ cvFit(fit7, data=pilgrim3, y=pilgrim3$Profit00, K=10, R=500) #205.038
 
 cvFit(fit2, data=pilgrim3, y=pilgrim3$Profit00, K=300, R=50) #215.3394
 cvFit(fit5, data=pilgrim3, y=pilgrim3$Profit00, K=300, R=50) #214.9193  
-cvFit(fit7, data=pilgrim3, y=pilgrim3$Profit00, K=300, R=50) #205.038 
+cvFit(fit7, data=pilgrim3, y=pilgrim3$Profit00, K=300, R=50) #205.038
+cvFit(fit11, data=pilgrim3, y=pilgrim3$Profit00, K=300, R=50) #214.3859
 
+pilgrimVal <- read.csv("pilgrim A2 data part 2 validation.csv")
+cvFit(fit7, data=pilgrimVal, y=pilgrimVal$Profit00, K=5, R=50)
+
+
+pilgrimVal$pred <- round(predict(fit7, newdata = pilgrimVal, type = 'response'),2)
+pilgrimVal$resid <- (pilgrimVal$pred - pilgrimVal$Profit00)
 
 # 5. Yes, they should move forward with the incentive program. 
 # The model estimates that the mean profit will increase from $101.50 to $140.40. 
